@@ -1,0 +1,71 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="AutoCloseableResource" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,org.apache.http.impl.client.HttpClientBuilder,build" />
+    </inspection_tool>
+    <inspection_tool class="HttpUrlsUsage" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredUrls">
+        <list>
+          <option value="http://localhost" />
+          <option value="http://127.0.0.1" />
+          <option value="http://0.0.0.0" />
+          <option value="http://www.w3.org/" />
+          <option value="http://json-schema.org/draft" />
+          <option value="http://java.sun.com/" />
+          <option value="http://xmlns.jcp.org/" />
+          <option value="http://javafx.com/javafx/" />
+          <option value="http://javafx.com/fxml" />
+          <option value="http://maven.apache.org/xsd/" />
+          <option value="http://maven.apache.org/POM/" />
+          <option value="http://www.springframework.org/schema/" />
+          <option value="http://www.springframework.org/tags" />
+          <option value="http://www.springframework.org/security/tags" />
+          <option value="http://www.thymeleaf.org" />
+          <option value="http://www.jboss.org/j2ee/schema/" />
+          <option value="http://www.jboss.com/xml/ns/" />
+          <option value="http://www.ibm.com/webservices/xsd" />
+          <option value="http://activemq.apache.org/schema/" />
+          <option value="http://schema.cloudfoundry.org/spring/" />
+          <option value="http://schemas.xmlsoap.org/" />
+          <option value="http://cxf.apache.org/schemas/" />
+          <option value="http://primefaces.org/ui" />
+          <option value="http://tiles.apache.org/" />
+          <option value="http://" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="MavenPackageUpdate" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="excludeList">
+        <list>
+          <option value="xalan:serializer" />
+          <option value="org.slf4j:slf4j-api" />
+          <option value="org.opensaml:xmltooling" />
+          <option value="com.fasterxml.jackson.core:jackson-core" />
+          <option value="com.fasterxml.jackson.core:jackson-databind" />
+          <option value="com.sun.xml.bind:jaxb-impl" />
+          <option value="commons-io:commons-io" />
+          <option value="javax.xml.bind:jaxb-api" />
+          <option value="javax.xml.soap:javax.xml.soap-api" />
+          <option value="net.sf.ehcache:ehcache-core" />
+          <option value="org.apache.cxf.xjc-utils:cxf-xjc-runtime" />
+          <option value="org.apache.cxf:cxf-rt-bindings-soap" />
+          <option value="org.apache.cxf:cxf-rt-ws-policy" />
+          <option value="org.apache.cxf:cxf-rt-ws-security" />
+          <option value="org.apache.logging.log4j:log4j-api" />
+          <option value="org.apache.logging.log4j:log4j-core" />
+          <option value="org.apache.neethi:neethi" />
+          <option value="org.apache.poi:poi" />
+          <option value="org.apache.poi:poi-ooxml" />
+          <option value="org.apache.santuario:xmlsec" />
+          <option value="org.apache.ws.xmlschema:xmlschema-core" />
+          <option value="org.codehaus.woodstox:stax2-api" />
+          <option value="org.jvnet.mimepull:mimepull" />
+          <option value="org.jvnet.staxex:stax-ex" />
+          <option value="org.opensaml:opensaml" />
+          <option value="org.opensaml:openws" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

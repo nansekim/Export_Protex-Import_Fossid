@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ * Copyright (C) 2009 - 2011 Black Duck Software Inc.
+ * http://www.blackducksoftware.com/
+ * All rights reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Black Duck Software ("Confidential Information").  You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into
+ * with Black Duck Software.
+ -->
+<project name="protex.sdk.client" default="main-from-server" basedir=".">
+	<description>Generate Client Library for the published SDK API V7.0</description>
+
+	<property name="wsdl.dir" value="etc-generated/META-INF" />
+	<property name="client.dir" value="client" />
+	<property name="client.src" value="${client.dir}/src" />
+	<property name="client.bin" value="${client.dir}/bin" />
+	<property name="client.dist" value="${client.dir}-dist" />
+	<property name="client.lib" value="lib" />
+	<property name="bin.dir" location="bin" />
+	<property name="dist.dir" location="dist-iso" />
+	<property name="cxfutils" value="blackduck-cxf-utilities-1.1" />
+	<property name="cxfutils.dir" value="${dist.dir}/cxf-utils" />
+	<property name="cxfutils.src" value="${cxfutils.dir}/src" />
+	<property name="cxfutils.bin" value="${cxfutils.dir}/bin" />
+	<property name="sdkutils.dir" value="${dist.dir}/utils" />
+	<property name="sdkutils.src" value="${sdkutils.dir}/src" />
+	<property name="sdkutils.bin" value="${sdkutils.dir}/bin" />
+	<property name="examples.dir" value="${dist.dir}/examples" />
+	<property name="examples.src" value="${examples.dir}/src" />
+	<property name="examples.bin" value="${examples.dir}/bin" />
+	<property name="javac.compile.version" value="1.7" />
+	
+	<property name="protex.server.version" value="7.0.2" />
+	
+	<property name="sdk.client.jar.name" value="protex-sdk-client-${protex.server.version}" />
+	<property name="sdk.utils.jar.name" value="protex-sdk-utilities-${protex.server.version}" />
+		
+		
+
+	<property environment="env" />
+
+	<target name="main" depends="dist-client, dist-utils, dist-examples" if="eclipse.running">
+		<eclipse.refreshLocal resource="${client.lib}" depth="infinite" />
+	</target>
+
+	<target name="main-from-server" depends="init-server, main" if="eclipse.running">
+		<eclipse.refreshLocal resource="${client.lib}" depth="infinite" />
+	</target>
+
+	<target name="init">
+		<delete dir="${dist.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<delete dir="${client.dist}" />
+		<mkdir dir="${client.dist}" />
+		<delete dir="${examples.dir}" />
+		<mkdir dir="${examples.dir}" />
+		<delete dir="${wsdl.dir}" />
+		<mkdir dir="${wsdl.dir}" />
+	</target>
+
+	<target name="init-server">
+		<property name="server.protocol" value="http" />
+		<property name="server.name" value="localhost" />
+		<property name="server.port" value="7100" />
+		<property name="server.sdk.version" value="v7_0" />
+		<condition property="load.from.server">
+			<isset property="server.name" />
+		</condition>
+	</target>
+	<path id="cxf.classpath">
+		<fileset dir="src/lib">
+			<include name="commons-lang-2.6.jar" />
+			<include name="commons-logging-1.1.1.jar" />
+			<include name="commons-collections-3.2.1.jar" />
+			<include name="cxf-2.7.6.jar" />
+			<include name="xml-resolver-1.2.jar" />
+			<include name="neethi-3.0.2.jar" />
+			<include name="xmlschema-core-2.0.3.jar" />
+			<include name="stax2-api-3.1.1.jar"/>
+			<include name="woodstox-core-asl-4.2.0.jar" />
+			<include name="cxf-xjc-boolean-2.6.2.jar" />
+			<include name="cxf-xjc-bug671-2.6.2.jar" />
+			<include name="jaxb-xjc-2.2.4-1.jar" />
+			<include name="jetty-util-11.0.7.jar" />
+			<include name="wsdl4j-1.6.2.jar" />
+			<include name="spring-2.5.6.jar" />
+		</fileset>
+	</path>
+	<path id="wsdl2java.classpath">
+		<fileset dir="src/lib">
+			<include name="cxf-xjc-boolean-2.6.2.jar" />
+			<include name="cxf-xjc-bug671-2.6.2.jar" />
+			<include name="jaxb-api-2.2.3.jar" />
+			<include name="jaxb-impl-2.2.4-1.jar" />
+			<include name="jaxb-xjc-2.2.4-1.jar" />
+			<include name="velocity-1.6.4.jar" />
+		</fileset>
+	</path>
+
+	<path id="external.classpath">
+		<fileset dir="src/lib">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+
+	<path id="util.classpath">
+		<fileset dir="${client.dist}">
+			<include name="${sdk.client.jar.name}.jar" />
+		</fileset>
+		<path refid="external.classpath" />
+	</path>
+
+	<path id="example.classpath">
+		<fileset dir="${client.dist}">
+			<include name="${sdk.utils.jar.name}.jar" />
+		</fileset>
+		<path refid="util.classpath" />
+	</path>
+
+	<!-- This macro creates a java endpoint for the WSDL -->
+	<macrodef name="wsdl-2-java">
+		<attribute name="classpath-refid" default="" />
+		<attribute name="default-package" />
+		<attribute name="wsdl-file" />
+		<sequential>
+			<echo>@{wsdl-file}</echo>
+			<java classname="org.apache.cxf.tools.wsdlto.WSDLToJava" fork="true">
+				<arg line="-b jaxws_bindings_fault.xml" />
+				<arg line="-xjc-verbose,-b,jaxb_bindings_enum.xml" />
+				<arg line="-p urn:blackducksoftware.com:sdk:v7.0:fault=com.blackducksoftware.sdk.fault" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:common=com.blackducksoftware.sdk.protex.common" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:role=com.blackducksoftware.sdk.protex.role" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:user=com.blackducksoftware.sdk.protex.user" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:obligation=com.blackducksoftware.sdk.protex.obligation" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:license=com.blackducksoftware.sdk.protex.license" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:localcomponent=com.blackducksoftware.sdk.protex.project.localcomponent" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:customcomponentmanagement=com.blackducksoftware.sdk.protex.component.custom" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:component=com.blackducksoftware.sdk.protex.component" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:policy=com.blackducksoftware.sdk.protex.policy" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:externalid=com.blackducksoftware.sdk.protex.policy.externalid" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:discovery=com.blackducksoftware.sdk.protex.project.codetree.discovery" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:identification=com.blackducksoftware.sdk.protex.project.codetree.identification" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:codetree=com.blackducksoftware.sdk.protex.project.codetree" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:comparison=com.blackducksoftware.sdk.protex.comparison" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:project=com.blackducksoftware.sdk.protex.project" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:bom=com.blackducksoftware.sdk.protex.project.bom" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:report=com.blackducksoftware.sdk.protex.report" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:template=com.blackducksoftware.sdk.protex.project.template" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:v7.0:synchronization=com.blackducksoftware.sdk.protex.synchronization" />
+				<arg line="-p urn:protex.blackducksoftware.com:sdk:7.0:message=@{default-package}.message" />
+				<arg line="-p @{default-package}" />
+				<arg value="-verbose" />
+				<arg value="-validate" />
+				<arg value="-client" />
+				<arg value="-d" />
+				<arg value="${client.src}" />
+				<arg value="@{wsdl-file}" />
+				<classpath>
+					<path refid="wsdl2java.classpath" />
+					<!--make sure before cxf itself-->
+					<path refid="@{classpath-refid}" />
+				</classpath>
+			</java>
+		</sequential>
+	</macrodef>
+
+	<target name="get-wsdl" depends="get-wsdl-from-server">
+	</target>
+
+	<target name="get-wsdl-from-server" depends="init" if="load.from.server">
+		<mkdir dir="${wsdl.dir}" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/role?wsdl" dest="${wsdl.dir}/roleApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/user?wsdl" dest="${wsdl.dir}/userApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/obligation?wsdl" dest="${wsdl.dir}/obligationApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/license?wsdl" dest="${wsdl.dir}/licenseApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/localcomponent?wsdl" dest="${wsdl.dir}/localcomponentApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/component?wsdl" dest="${wsdl.dir}/componentApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/customcomponentmanagement?wsdl" dest="${wsdl.dir}/customcomponentmanagementApi.wsdl" />	
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/project?wsdl" dest="${wsdl.dir}/projectApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/codetree?wsdl" dest="${wsdl.dir}/codetreeApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/discovery?wsdl" dest="${wsdl.dir}/discoveryApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/identification?wsdl" dest="${wsdl.dir}/identificationApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/report?wsdl" dest="${wsdl.dir}/reportApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/policy?wsdl" dest="${wsdl.dir}/policyApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/filecomparison?wsdl" dest="${wsdl.dir}/filecomparisonApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/bom?wsdl" dest="${wsdl.dir}/bomApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/synchronization?wsdl" dest="${wsdl.dir}/synchronizationApi.wsdl" />
+		<get src="${server.protocol}://${server.name}:${server.port}/protex-sdk/${server.sdk.version}/template?wsdl" dest="${wsdl.dir}/templateApi.wsdl" />
+	</target>
+
+	<target name="protex-ws-to-java" depends="get-wsdl">
+		<delete dir="${client.src}" />
+		<delete dir="${client.bin}" />
+		<mkdir dir="${client.src}" />
+		<mkdir dir="${client.bin}" />
+
+		<!-- order of generation matters in this as classes get used and overwritten by subsequent APIs -->
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.role" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/roleApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.user" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/userApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.obligation" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/obligationApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.license" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/licenseApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.component" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/componentApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.component.custom" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/customcomponentmanagementApi.wsdl" />			
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.localcomponent" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/localcomponentApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.comparison" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/filecomparisonApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/projectApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.codetree" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/codetreeApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.codetree.discovery" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/discoveryApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.codetree.identification" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/identificationApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.template" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/templateApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.synchronization" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/synchronizationApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.project.bom" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/bomApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.policy" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/policyApi.wsdl" />
+		<wsdl-2-java default-package="com.blackducksoftware.sdk.protex.report" classpath-refid="cxf.classpath" wsdl-file="${wsdl.dir}/reportApi.wsdl" />
+		<javac srcdir="${client.src}" source="${javac.compile.version}" target="${javac.compile.version}" destdir="${client.bin}" includeantruntime="false">
+			<classpath>
+				<path refid="cxf.classpath" />
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="dist-client" depends="protex-ws-to-java">
+		<jar jarfile="${client.dist}/${sdk.client.jar.name}.jar" basedir="${client.bin}">
+			<include name="**" />
+		</jar>
+		<zip zipfile="${client.dist}/${sdk.client.jar.name}-src.zip" basedir="${client.src}">
+			<include name="**/*.java" />
+		</zip>
+	</target>
+	<target name="dist-utils" depends="dist-client, utils">
+		<jar jarfile="${client.dist}/${sdk.utils.jar.name}.jar" basedir="${sdkutils.bin}">
+			<include name="**" />
+		</jar>
+		<zip zipfile="${client.dist}/${sdk.utils.jar.name}-src.zip" basedir="${sdkutils.src}">
+			<include name="**/*.java" />
+		</zip>
+	</target>
+	<target name="dist-cxf-utils" depends="cxf-utils">
+		<jar jarfile="${client.dist}/${cxfutils}.jar" basedir="${cxfutils.bin}">
+			<include name="**" />
+		</jar>
+		<zip zipfile="${client.dist}/${cxfutils}-src.zip" basedir="${cxfutils.src}">
+			<include name="**/*.java" />
+			<include name="README.txt" />
+		</zip>
+		<!-- remove theME.txt that should only end up in the src jar -->
+		<delete file="${cxfutils.src}/README.txt" />
+	</target>
+	<target name="dist-examples" depends="dist-client, dist-utils, examples">
+		<!-- nothing to distribute here -->
+	</target>
+
+	<target name="javadoc">
+		<!-- makes not much sense to have those client side javadocs, if we have server side javadocs
+		<javadoc access="public" author="false" classpathref="external.classpath" destdir="${dist.dir}/javadocs" nodeprecated="false" nodeprecatedlist="false" noindex="false" nonavbar="false" notree="false" packagenames="com.blackducksoftware.sdk.*" source="1.6" sourcepath="examples:utils:${client.src}" splitindex="true" use="true" version="false" />
+-->
+	</target>
+
+	<target name="examples">
+		<mkdir dir="${examples.src}" />
+		<mkdir dir="${examples.bin}" />
+		<copy todir="${examples.src}">
+			<fileset dir="examples">
+				<include name="**/*.java" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+		<javac srcdir="${examples.src}" destdir="${examples.bin}" source="${javac.compile.version}" target="${javac.compile.version}" classpathref="example.classpath" includeantruntime="false" />
+	</target>
+
+	<target name="utils" depends="dist-cxf-utils">
+		<mkdir dir="${sdkutils.src}" />
+		<mkdir dir="${sdkutils.bin}" />
+		<copy todir="${sdkutils.src}">
+			<fileset dir="utils">
+				<include name="**/*.java" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+		<javac srcdir="${sdkutils.src}" destdir="${sdkutils.bin}" source="${javac.compile.version}" target="${javac.compile.version}" classpathref="util.classpath" includeantruntime="false" />
+	</target>
+
+	<target name="cxf-utils">
+		<mkdir dir="${cxfutils.src}" />
+		<mkdir dir="${cxfutils.bin}" />
+		<copy todir="${cxfutils.src}">
+			<fileset dir="cxf-utils">
+				<include name="README.txt" />
+				<include name="**/*.java" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+		<javac srcdir="${cxfutils.src}" destdir="${cxfutils.bin}" source="${javac.compile.version}" target="${javac.compile.version}" classpathref="util.classpath" includeantruntime="false" />
+	</target>
+
+	<target name="clean-dist-iso" depends="">
+		<delete dir="${dist.dir}" />
+		<mkdir dir="${dist.dir}" />
+		<!--mkdir dir="${dist.dir}/examples/bin" />
+		<mkdir dir="${dist.dir}/utils/bin" />
+		<mkdir dir="${dist.dir}/utils/src" /-->
+	</target>
+
+</project>
